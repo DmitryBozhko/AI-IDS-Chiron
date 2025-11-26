@@ -1,0 +1,9 @@
+flask>=2.2
+flask-cors
+scapy
+netifaces
+pyarrow
+pandas
+numpy
+scikit-learn
+joblib
