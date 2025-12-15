@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAuthed() { return request.auth != null; }
+
+    // evidence/{controlId}/{uid}/{filename}
+    match /evidence/{controlId}/{user_id}/{fileName} {
+      allow read: if isAuthed();
+
+      // Allow creating uploads when authenticated and the uid matches and size is capped
+      allow create: if isAuthed() && request.auth.uid == user_id
+        && request.resource.size < 20 * 1024 * 1024; // 20 MB cap
+
+      // Allow deletes for the uploader (so they can remove their own files)
+      allow delete: if isAuthed() && request.auth.uid == user_id;
+
+      // Disallow arbitrary updates from clients
+      allow update: if false;
+    }
+  }
+}
+

@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function memberList(data) {
+      return data.keys().hasAny(['members']) && data.members is list ? data.members : [];
+    }
+
+    function hasRole(data, uid, roles) {
+      return memberList(data)
+        .where(member => member.uid == uid && roles.hasAny([member.role]))
+        .size() > 0;
+    }
+
+    function ownerCount(data) {
+      return memberList(data)
+        .where(member => member.role == 'owner')
+        .size();
+    }
+
+    match /businesses/{businessId} {
+      allow read: if isAuthed() && hasRole(resource.data, request.auth.uid, ['owner', 'editor', 'viewer']);
+
+      allow create: if isAuthed() &&
+        hasRole(request.resource.data, request.auth.uid, ['owner']) &&
+        ownerCount(request.resource.data) > 0 &&
+        request.resource.data.keys().hasAll(['name', 'controlState', 'poams', 'evidence', 'members']);
+
+      allow update: if isAuthed() &&
+        hasRole(resource.data, request.auth.uid, ['owner', 'editor']) &&
+        ownerCount(request.resource.data) > 0 &&
+        request.resource.data.keys().hasAll(['name', 'controlState', 'poams', 'evidence', 'members']) &&
+        (
+          request.resource.data.members == resource.data.members ||
+          hasRole(resource.data, request.auth.uid, ['owner'])
+        );
+
+      allow delete: if isAuthed() && hasRole(resource.data, request.auth.uid, ['owner']);
+    }
+
+    match /controls/{controlId} {
+      allow read: if isAuthed();
+
+      allow create, update: if isAuthed() &&
+        (!('status' in request.resource.data) || request.resource.data.status in ['not_implemented','partially_implemented','fully_implemented']) &&
+        request.resource.data.keys().hasAll(['code','title','family']) &&
+        request.time > timestamp.date(2020,1,1);
+
+      allow delete: if false;
+
+      match /comments/{commentId} {
+        allow read: if isAuthed();
+        allow create: if isAuthed() && request.resource.data.authorUid == request.auth.uid;
+        allow update, delete: if isAuthed() && resource.data.authorUid == request.auth.uid;
+      }
+
+      match /evidence/{evidenceId} {
+        allow read: if isAuthed();
+        allow create: if isAuthed() && request.resource.data.uploadedBy == request.auth.uid;
+        allow update, delete: if isAuthed() && resource.data.uploadedBy == request.auth.uid;
+      }
+    }
+
+    match /userProfiles/{uid} {
+      allow read: if isAuthed();
+      allow write: if isAuthed() && request.auth.uid == uid;
+    }
+  }
+}
