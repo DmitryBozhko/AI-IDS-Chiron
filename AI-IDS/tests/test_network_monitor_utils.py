@@ -33,7 +33,7 @@ def _build_config(
         {
             "DEFAULT": {
                 "DefaultWindowSize": "100",
-                "ModelPath": "models/iforest.joblib",
+                "ModelPath": "AI-IDS/models/iforest.joblib",
             },
             "IsolationForest": {
                 "Contamination": "0.03",

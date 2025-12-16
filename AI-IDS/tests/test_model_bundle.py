@@ -4,7 +4,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-MODEL = os.environ.get("IDS_MODEL", "models/iforest.joblib")
+MODEL = os.environ.get("IDS_MODEL", "AI-IDS/models/iforest.joblib")
 EXPECTED = [
     "protocol",
     "packet_size_log",

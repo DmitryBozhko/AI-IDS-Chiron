@@ -15,7 +15,7 @@ def test_severity_mapping_no_crash():
         {
             "DEFAULT": {
                 "DefaultWindowSize": "100",
-                "ModelPath": "models/iforest.joblib",
+                "ModelPath": "AI-IDS/models/iforest.joblib",
             },
             "IsolationForest": {
                 "Contamination": "0.05",

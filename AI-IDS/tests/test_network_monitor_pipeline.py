@@ -35,7 +35,7 @@ def _config(enable_signatures: bool = True) -> configparser.ConfigParser:
         {
             "DEFAULT": {
                 "DefaultWindowSize": "64",
-                "ModelPath": "models/iforest.joblib",
+                "ModelPath": "AI-IDS/models/iforest.joblib",
             },
             "IsolationForest": {
                 "Contamination": "0.05",
