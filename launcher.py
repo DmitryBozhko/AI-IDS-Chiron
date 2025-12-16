@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 import signal
 import subprocess
 import webbrowser
@@ -80,7 +81,31 @@ def open_unified_app():
     webbrowser.open(UNIFIED_APP_URL)
 
 def _ppid_map() -> dict[int, list[int]]:
+    """
+    Build a mapping of parent pid -> list of child pids.
+    Works on Unix (ps) and Windows (wmic). Returns empty dict on failure.
+    """
     try:
+        if os.name == 'nt':
+            out = subprocess.check_output(['wmic', 'process', 'get', 'ParentProcessId,ProcessId'], text=True, stderr=subprocess.DEVNULL)
+            mp: dict[int, list[int]] = {}
+            lines = out.splitlines()
+            # Skip header line(s)
+            for line in lines[1:]:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split()
+                if len(parts) < 2:
+                    continue
+                try:
+                    ppid = int(parts[0])
+                    pid = int(parts[1])
+                except ValueError:
+                    continue
+                mp.setdefault(ppid, []).append(pid)
+            return mp
+
         out = subprocess.check_output(["ps", "-axo", "pid=,ppid="], text=True)
     except Exception:
         return {}
@@ -100,6 +125,7 @@ def _ppid_map() -> dict[int, list[int]]:
         mp.setdefault(ppid, []).append(pid)
     return mp
 
+
 def _descendants(root_pid: int) -> list[int]:
     mp = _ppid_map()
     stack = [root_pid]
@@ -115,11 +141,21 @@ def _descendants(root_pid: int) -> list[int]:
             stack.append(c)
     return out
 
+
 def _kill_pid(pid: int, sig: int):
     try:
-        os.kill(pid, sig)
+        if os.name == 'nt':
+            # Use taskkill to aggressively kill a pid and its children on Windows
+            subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            # Only send signal on Unix systems
+            if hasattr(signal, 'SIGKILL') and sig == signal.SIGKILL:
+                os.kill(pid, signal.SIGKILL)
+            else:
+                os.kill(pid, sig)
     except Exception:
         pass
+
 
 def _kill_proc_group(proc: subprocess.Popen | None):
     """Kill the whole process group for a dev server, if it's running."""
@@ -135,17 +171,27 @@ def _kill_proc_group(proc: subprocess.Popen | None):
         pids = []
     pids.append(proc.pid)
 
-    try:
-        pgid = os.getpgid(proc.pid)
-    except Exception:
-        pgid = None
+    pgid = None
+    if os.name != 'nt':
+        try:
+            pgid = os.getpgid(proc.pid)
+        except Exception:
+            pgid = None
 
-    if pgid is not None:
+    if pgid is not None and os.name != 'nt':
         try:
             os.killpg(pgid, signal.SIGINT)
         except Exception:
             pass
+    else:
+        # On Windows, best-effort stop the process tree quickly
+        if os.name == 'nt':
+            try:
+                subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
 
+    # Fallback iteration for any remaining pids
     for pid in pids:
         _kill_pid(pid, signal.SIGINT)
 
@@ -154,11 +200,17 @@ def _kill_proc_group(proc: subprocess.Popen | None):
             return
         time.sleep(0.1)
 
-    if pgid is not None:
+    if pgid is not None and os.name != 'nt':
         try:
             os.killpg(pgid, signal.SIGTERM)
         except Exception:
             pass
+    else:
+        if os.name == 'nt':
+            try:
+                subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
 
     for pid in pids:
         _kill_pid(pid, signal.SIGTERM)
@@ -168,14 +220,23 @@ def _kill_proc_group(proc: subprocess.Popen | None):
             return
         time.sleep(0.1)
 
-    if pgid is not None:
+    if pgid is not None and os.name != 'nt':
         try:
             os.killpg(pgid, signal.SIGKILL)
         except Exception:
             pass
+    else:
+        if os.name == 'nt':
+            try:
+                subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except Exception:
+                pass
 
     for pid in pids:
-        _kill_pid(pid, signal.SIGKILL)
+        if os.name != 'nt':
+            _kill_pid(pid, signal.SIGKILL)
+        else:
+            _kill_pid(pid, signal.SIGTERM)
 
     try:
         proc.wait(timeout=1)
