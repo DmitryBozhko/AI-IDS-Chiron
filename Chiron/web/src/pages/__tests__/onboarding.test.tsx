@@ -56,7 +56,7 @@ describe('Onboarding — create account and quick start', () => {
 
     // After sign-in the app should navigate to the dashboard and auto-select the first company
     await waitFor(() => {
-      expect(screen.getByText(/Overview/i)).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /^Overview$/i })).toBeInTheDocument()
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
   })

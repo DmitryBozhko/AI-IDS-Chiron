@@ -18,6 +18,6 @@ describe('SidebarShell', () => {
     // role label should be present (Guest/Owner/Editor/Viewer etc.)
     expect(screen.getByText(/Guest|Owner|Editor|Viewer/i)).toBeInTheDocument()
     // nav links should exist
-    expect(screen.getByRole('link', { name: /dashboard/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Compliance Dashboard/i })).toBeInTheDocument()
   })
 })
