@@ -2,12 +2,12 @@ name: CI
 
 on:
   pull_request:
-    branches: [ Dev, main ]
+    branches: [ Combined, main ]
     paths:
       - "web/**"
       - ".github/workflows/**"
   push:
-    branches: [ Dev ]
+    branches: [ Combined ]
     paths:
       - "web/**"
       - ".github/workflows/**"
