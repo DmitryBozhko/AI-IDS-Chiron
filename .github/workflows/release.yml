@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump to apply (patch | minor | major)'
+        required: true
+        default: 'patch'
+      prerelease:
+        description: 'Pre-release identifier (e.g., alpha, beta, dev) - leave empty for production release'
+        required: false
+        type: string
+      branch:
+        description: 'Branch to release from (default: main)'
+        required: false
+        default: 'main'
+        type: string
+
+jobs:
+  release:
+    name: Run release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.branch }}
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_BASE_PATH: /
+
+      - name: Bump version (package.json only)
+        id: bump
+        run: |
+          VERSION_ARGS="${{ github.event.inputs.bump }}"
+          if [ ! -z "${{ github.event.inputs.prerelease }}" ]; then
+            VERSION_ARGS="pre${VERSION_ARGS} --preid=${{ github.event.inputs.prerelease }}"
+          fi
+          npm version $VERSION_ARGS --no-git-tag-version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${{ github.event.inputs.prerelease != '' }}" >> $GITHUB_OUTPUT
+
+      - name: Commit version change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json || true
+          git commit -m "chore(release): bump web version to ${{ steps.bump.outputs.new_version }}" || echo "No changes to commit"
+          git push origin HEAD:${{ github.event.inputs.branch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create tag and push
+        run: |
+          TAG="${{ steps.bump.outputs.new_tag }}"
+          git tag "$TAG"
+          git push origin "$TAG"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ steps.bump.outputs.new_tag }}
+          release_name: Release ${{ steps.bump.outputs.new_version }}
+          body: |
+            ${{ github.event.inputs.prerelease != '' && 'Pre-release build from branch: ' || 'Release from branch: ' }}${{ github.event.inputs.branch }}
+            
+            Automated release created by workflow
+          prerelease: ${{ steps.bump.outputs.is_prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
