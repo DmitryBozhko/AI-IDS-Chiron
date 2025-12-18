@@ -68,7 +68,7 @@ export default function BusinessSelector({
             <button
               type="button"
               onClick={onClose}
-              style={{ background: 'transparent', border: 'none', fontSize: '1.1rem', cursor: 'pointer' }}
+              style={{\n                background: '#e2e8f0',\n                border: 'none',\n                fontSize: '1.1rem',\n                cursor: 'pointer',\n                display: 'flex',\n                alignItems: 'center',\n                justifyContent: 'center',\n                borderRadius: '999px',\n                width: '34px',\n                height: '34px',\n              }}
               aria-label="Close company selector"
             >
               ×
@@ -217,3 +217,4 @@ function renderBusinessCard({
     </button>
   )
 }
+

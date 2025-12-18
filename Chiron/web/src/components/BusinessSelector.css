@@ -5,19 +5,21 @@
     max-height: 90vh;
     overflow: auto;
     background-color: #fff;
-    border-radius: 12;
-    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+    border-radius: 18px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 35px 65px rgba(15, 23, 42, 0.35);
     padding: 2rem;
     display: grid;
     gap: 1.5rem;
 }
 
-footer{
+#business-selector-modal footer{
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
     margin-top: .5rem;
+    flex-wrap: wrap;
 }
 
 h2 {
@@ -56,12 +58,14 @@ label {
     display: block;
 }
 
-footer button {
-    padding: 0.5rem 1rem;
+#business-selector-modal footer button {
+    padding: 0.65rem 1.25rem;
     border-radius: 6px;
     border: 1px solid var(--border);
     background: #2563eb;
     color: white;
     cursor: pointer;
     transition: background-color 0.2s ease;
+}
+    box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
 }
