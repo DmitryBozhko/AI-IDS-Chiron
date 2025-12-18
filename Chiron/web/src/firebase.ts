@@ -25,7 +25,7 @@ function hasValidConfig(config: typeof firebaseConfig) {
 }
 
 // may be set to false if firebaseConfig is not properly set or need to skip firebase initialization
-export const isFirebaseConfigured = (hasValidConfig(firebaseConfig) && true) // <-- Set to true if firebaseConfig is properly set
+export const isFirebaseConfigured = false
 
 function initFirebaseApp(): FirebaseApp | undefined {
   if (!isFirebaseConfigured) return undefined
